@@ -1,0 +1,33 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: 'towards-azureportal'
+    scriptType: 'bash'
+    scriptLocation: 'inlineScript'
+    inlineScript: |
+      docker build -t hunchocr.azurecr.io/web-game:tag 2048-game
+      az acr login --name hunchoCR
+      docker push hunchocr.azurecr.io/web-game:tag
+
+- script: cat kubernetes_aks/app-deploy.yml
+- task: Kubernetes@1
+  inputs:
+    connectionType: 'Azure Resource Manager'
+    azureSubscriptionEndpoint: 'towards-azureportal'
+    azureResourceGroup: 'mylabRG'
+    kubernetesCluster: 'myAzureKubeCluster'
+    namespace: 'default'
+    command: 'apply'
+    useConfigurationFile: true
+    configuration: 'kubernetes_aks'
+    secretType: 'dockerRegistry'
+    containerRegistryType: 'Azure Container Registry'
+    azureSubscriptionEndpointForSecrets: 'towards-azureportal'
+    azureContainerRegistry: 'hunchocr.azurecr.io'
+    forceUpdate: false
